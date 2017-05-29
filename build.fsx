@@ -64,18 +64,51 @@ let folderToComponentContent folder =
       content = content }
 
     
+let allCombinations lst =
+    let rec comb accLst elemLst =
+        match elemLst with
+        | h::t ->
+            let next = [h]::List.map (fun el -> h::el) accLst @ accLst
+            comb next t
+        | _ -> accLst
+    comb [] lst
 
-// let getComponentList folder =
-//     let baseFile = folder </> "base.docker"
+let getCommitHistory (componentList : ComponentContent list) (componentNames : string list) =
+    componentList
+    |> List.filter (fun com -> componentNames |> List.contains com.componentName)
+    |> List.sortBy (fun com -> com.version)
+
+let getComponentList folder =
+    let baseFile = folder </> "base.docker"
+    
+    let components = 
+        folder
+        |> Directory.GetDirectories
+        |> List.ofArray
+        |> List.map Path.GetFileName
+         
+    let allHistory = 
+        folder
+        |> Directory.GetDirectories
+        |> Seq.map Directory.GetDirectories
+        |> Seq.collect id
+        |> Seq.map folderToComponentContent
+        |> List.ofSeq
+    
+    components
+    |> allCombinations
+    |> Seq.iter 
+        (fun comps -> 
+            let hist = getCommitHistory allHistory comps
+            
+            let tracable = hist |> Seq.map (fun h->h.commitText)
+            tracefn "%A" tracable
+        )
+    
+    
 
 
 Target "Trace" <| fun _ ->
-    Directory.GetDirectories "components"
-    |> Seq.map Directory.GetDirectories
-    |> Seq.collect id
-    |> Seq.map folderToComponentContent
-    |> tracefn "%A" 
-     
-    trace "Trace"
+    getComponentList "components" 
 
 RunTargetOrDefault "Trace"
