@@ -9,6 +9,7 @@ open Fake
     module Constants =
         let BUILDER_PREFIX = "### BUILDER:"
         let BUILDER_COMMIT_MESSAGE = "COMMIT MESSAGE:"
+        let BUILDER_COMPONENT_VERSION = "VERSION:"
         let COMPONENT_DOCKER = "component.docker"
 
 type RepoRecord =
@@ -20,21 +21,29 @@ type RepoRecord =
 type ComponentContent =
     { componentName  : string
       content        : string
-      version        : int64
+      date           : int64
+      version        : string
       items          : string list
       commitText     : string }
 
-let readCommitText file =
+let readBuilderMetadata tag file =
     let filteredContents = 
         File.ReadAllLines file
         |> Seq.filter (fun line -> line.Contains Constants.BUILDER_PREFIX)
-        |> Seq.filter (fun line -> line.Contains Constants.BUILDER_COMMIT_MESSAGE)
+        |> Seq.filter (fun line -> line.Contains tag)
         |> List.ofSeq
     
     match filteredContents with
-        h::t -> h.Substring(h.IndexOf(Constants.BUILDER_COMMIT_MESSAGE) + Constants.BUILDER_COMMIT_MESSAGE.Length)
+        h::t -> h.Substring(h.IndexOf(tag) + tag.Length)
                 |> trim
-        | _ -> failwithf "No commit message is specified for the file %s" file
+        | _ -> failwithf "No %s is specified for the file %s" tag file
+
+
+let readCommitText =
+    readBuilderMetadata Constants.BUILDER_COMMIT_MESSAGE
+
+let readVersionText =
+    readBuilderMetadata Constants.BUILDER_COMPONENT_VERSION
 
 let readFileContents file =
     File.ReadAllLines file
@@ -46,12 +55,13 @@ let folderToComponentContent folder =
     let file = folder </> Constants.COMPONENT_DOCKER
     let content = readFileContents file
     let commitText = readCommitText file
-    let version = Path.GetFileName folder |> int64
+    let version = readVersionText file
+    let date = Path.GetFileName folder |> int64
     let componentName = folder
                         |> Directory.GetParent
                         |> string
                         |> Path.GetFileName
-    tracefn "Component %s of version %i with commit text \"%s\"" componentName version commitText
+    tracefn "Component %s of date %i and version %s with commit text \"%s\"" componentName date version commitText
 
     let items = !! (folder + "/**/*.*")
                 -- (folder + "/**/*" + Constants.COMPONENT_DOCKER)
@@ -60,6 +70,7 @@ let folderToComponentContent folder =
     { componentName = componentName
       items = items
       commitText = commitText
+      date = date
       version = version
       content = content }
 
@@ -76,7 +87,7 @@ let allCombinations lst =
 let getCommitHistory (componentList : ComponentContent list) (componentNames : string list) =
     componentList
     |> List.filter (fun com -> componentNames |> List.contains com.componentName)
-    |> List.sortBy (fun com -> com.version)
+    |> List.sortBy (fun com -> com.date)
 
 let getComponentList folder =
     let baseFile = folder </> "base.docker"

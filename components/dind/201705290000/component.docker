@@ -1,4 +1,5 @@
 ### BUILDER: COMMIT MESSAGE: Docker-in-docker 1.13.0
+### BUILDER: VERSION: 1.13.0
 
 RUN apt-get update
 
