@@ -1,3 +1,5 @@
+### BUILDER: COMMIT MESSAGE: Base docker image
+
 FROM jenkinsci/jnlp-slave
 
 # Metadata

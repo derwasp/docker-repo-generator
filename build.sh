@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-FAKE_EXE=packages/build/FAKE/tools/FAKE.exe
+FAKE_EXE=packages/builder/FAKE/tools/FAKE.exe
 
 OS=${OS:-"unknown"}
 run() {
